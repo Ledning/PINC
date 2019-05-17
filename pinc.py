@@ -5,8 +5,10 @@ import subprocess
 import requests
 from bs4 import BeautifulSoup
 import os
+import urllib
 
 packagepath = "/tmp/package"
+makesettings = "-sir"
 
 
 def parser():
@@ -15,44 +17,62 @@ def parser():
     p.add_argument("-s", dest='search_flag', action='store_true', help='Search for package in the aur repository')
     p.add_argument("-u", dest='update_flag', action='store_true', help='Check for updates')
     p.add_argument("-r", dest='run_flag', action='store_true', help='Make packages')
+    p.add_argument('pkg', nargs='*', help='Package')
     return p, p.parse_args()
 
 
 def main():
     parse, args = parser()
-    download_pkg(args, "google-chrome")
     if args.download_flag:
-        download_pkg(args, pkg)
+        for pkg in args.pkg:
+            download_pkg(args, pkg)
     elif args.search_flag:
-        search_pkg()
+        query = ''.join(str(x) + " " for x in args.pkg)
+        search_pkg(query)
     elif args.update_flag:
         update_pkg(args)
     elif args.run_flag:
-        make_pkg()
+        for pkg in args.pkg:
+            make_pkg(pkg)
 #    else:
 #        parse.print_help()
 
 
 def download_pkg(args, pkg):
+    if pkg is "":
+        print("No package specified.")
+        exit()
     try:
         os.mkdir(packagepath)
     except:
-        print("beep boop")
         pass
 
     link = "https://aur.archlinux.org/" + pkg + ".git"
-    print(link)
+
     try:
-        subprocess_response = subprocess.run(["git", "-C", packagepath, "clone", link], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        if args.run_flag:
-            make_pkg()
+        subprocess.run(["git", "-C", packagepath, "clone", link], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     except:
         print("Can not download or find the directory | " + pkg)
         exit()
 
+    if args.run_flag:
+        make_pkg(pkg)
 
-def search_pkg():
-    return
+
+def search_pkg(query):
+    link = "https://aur.archlinux.org/packages/?K=" + urllib.parse.quote(query)
+    try:
+        response = requests.get(link)
+        parsed_html = BeautifulSoup(response.text, "html.parser")
+        parsed_query = parsed_html.find_all("tr")
+        for x in parsed_query[1:]:
+            y = x.find('td', attrs={'class':'wrap'})
+            print(x.a.contents[0] + ": " + str(y.text))
+        if len(parsed_query) is 0:
+            print("No packages found")
+    except:
+        print("Could not search for package from aur.")
+        exit()
 
 
 def update_pkg(args):
@@ -78,11 +98,16 @@ def check_package_for_update(pkg, ver):
         newestpkg = str(parsed_html.find_all("h2")[1]).replace("<h2>Package Details: ", "").replace("</h2>", "").split(" ")
         return newestpkg[1] is ver
     except:
-        print("shit it's på danish")
+        print("Could not fetch package from aur.")
         exit()
 
-def make_pkg():
-    return
+
+def make_pkg(pkg):
+    path = packagepath + "/" + pkg
+    os.chdir(path)
+    p = subprocess.Popen(["makepkg", makesettings])
+    p.communicate()
+
 
 
 if __name__ == "__main__":
