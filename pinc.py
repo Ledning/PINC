@@ -6,9 +6,12 @@ import requests
 from bs4 import BeautifulSoup
 import os
 import urllib
+import threading
 
 packagepath = "/tmp/package"
 makesettings = "-sir"
+threads = 10
+runlist = []
 
 
 def parser():
@@ -21,24 +24,36 @@ def parser():
     return p, p.parse_args()
 
 
+parse, args = parser()
+
+
 def main():
-    parse, args = parser()
     if args.download_flag:
-        for pkg in args.pkg:
-            download_pkg(args, pkg)
-    elif args.search_flag:
+        if not args.update_flag:
+            for pkg in args.pkg:
+                download_pkg(pkg)
+    if args.search_flag:
+        if args.download_flag or args.update_flag or args.run_flag:
+            parse.print_help()
+            exit()
         query = ''.join(str(x) + " " for x in args.pkg)
         search_pkg(query)
-    elif args.update_flag:
-        update_pkg(args)
-    elif args.run_flag:
-        for pkg in args.pkg:
+    if args.update_flag:
+        update_pkg()
+    if args.run_flag:
+        if args.update_flag and not args.download_flag:
+            parse.print_help()
+            exit()
+        if not args.download_flag:
+            for pkg in args.pkg:
+                make_pkg(pkg)
+    if len(runlist) > 0:
+        for pkg in runlist:
             make_pkg(pkg)
-#    else:
-#        parse.print_help()
+    #  parse.print_help()
 
 
-def download_pkg(args, pkg):
+def download_pkg(pkg):
     if pkg is "":
         print("No package specified.")
         exit()
@@ -56,7 +71,7 @@ def download_pkg(args, pkg):
         exit()
 
     if args.run_flag:
-        make_pkg(pkg)
+        runlist.append(pkg)
 
 
 def search_pkg(query):
@@ -75,28 +90,33 @@ def search_pkg(query):
         exit()
 
 
-def update_pkg(args):
+def update_pkg():
     subprocess_response = subprocess.run(["pacman", "-Qm"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     package = str(subprocess_response.stdout.decode("utf-8")).split("\n")
     packagelist = []
     for pkg in package:
         if pkg is not "":
             packagelist.append(pkg.split(" "))
-    for x in packagelist:
-        if check_package_for_update(x[0], x[1]):
-            if args.download_flag:
-                download_pkg(x[0])
-            else:
-                print(x[0])
+    while len(packagelist) > 0:
+        if threading.active_count()-1 < threads:
+            pkg = packagelist.pop()
+            threading.Thread(target=is_pkg_uptodate, args=(pkg[0], pkg[1], args.download_flag)).start()
+    while threading.active_count() != 1:
+        pass
+    return True
 
 
-def check_package_for_update(pkg, ver):
+def is_pkg_uptodate(pkg, ver, download=False):
     link = "https://aur.archlinux.org/packages/" + pkg
     try:
         response = requests.get(link)
         parsed_html = BeautifulSoup(response.text, "html.parser")
         newestpkg = str(parsed_html.find_all("h2")[1]).replace("<h2>Package Details: ", "").replace("</h2>", "").split(" ")
-        return newestpkg[1] is ver
+        if newestpkg[1] is not ver:
+            print("{} {} --> {}".format(pkg, ver, newestpkg[1]))
+            if download:
+                download_pkg(pkg)
+
     except:
         print("Could not fetch package from aur.")
         exit()
@@ -107,7 +127,6 @@ def make_pkg(pkg):
     os.chdir(path)
     p = subprocess.Popen(["makepkg", makesettings])
     p.communicate()
-
 
 
 if __name__ == "__main__":
