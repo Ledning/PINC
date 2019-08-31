@@ -5,6 +5,7 @@ import os
 import sys
 import subprocess
 import threading
+import errno as ecode
 import urllib
 from enum import Enum
 from pathlib import Path
@@ -121,7 +122,7 @@ def args_validator():
     if args.run_flag and not (args.download_flag or args.pkg):
         return False
     if args.clean_flag and args.download_flag and not args.run_flag:
-        print("Okay... But why?")
+        error("Okay... But why?", force=True)
     return True
 
 
@@ -132,8 +133,15 @@ def download_pkg(pkg):
         error("No package specified.", force=True, kill=True)
     try:
         os.mkdir(configuration['local_path'])
-    except OSError:
-        pass
+    except OSError as e:
+        if e.errno != ecode.EEXIST:
+            if e.errno == ecode.EACCES:
+                error("You do not have permission to write to your local path " + configuration['local_path'],
+                      force=True, kill=True)
+            elif e.errno == ecode.ENOSPC:
+                error("You don't have enough space :(", force=True, kill=True)
+            else:
+                error("Unknown error creating directory")
 
     try:
         subprocess.run(["git", "-C", configuration['local_path'], "clone", link], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
