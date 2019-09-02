@@ -114,6 +114,8 @@ def config_parser():
 def args_validator():
     if len(sys.argv) < 2:
         return False
+    if args.verbose_flag and len(sys.argv) < 3:
+        return False
 
     if args.search_flag and (args.download_flag or args.update_flag or args.run_flag):
         return False
