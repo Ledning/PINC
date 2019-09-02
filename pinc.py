@@ -4,7 +4,7 @@ import argparse
 import os
 import sys
 import subprocess
-import threading
+import json
 import errno as ecode
 import urllib
 from enum import Enum
@@ -26,11 +26,6 @@ class PkgVer(Enum):
 home = str(Path.home())
 config_file_location = home + "/.config/pinc/pinc.conf"
 run_list = []
-
-# PKGBUILD: https://aur.archlinux.org/cgit/aur.git/plain/PKGBUILD?h={PKG}
-# clone:    https://aur.archlinux.org/{PKG}.git
-# PKG:      https://aur.archlinux.org/packages/{PKG}
-# Search:   https://aur.archlinux.org/packages/?K={Query}
 
 configuration = {
     'repository': "https://aur.archlinux.org/",
@@ -93,7 +88,7 @@ def config_parser():
             line = line.strip()
             line = line.rstrip("\n")
 
-            if line.startswith("#") or len(line) < 2:
+            if line.strip().startswith("#") or len(line) < 2:
                 continue
 
             key, value = line.split("=")
@@ -173,38 +168,27 @@ def search_pkg(query):
 
 def update_pkg():
     subprocess_response = subprocess.run(["pacman", "-Qm"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    packages = str(subprocess_response.stdout.decode("utf-8")).split("\n")
-    package_list = []
-    for pkg in packages:
-        if pkg != "":
-            package_list.append(pkg.split(" "))
-    while len(package_list) > 0:
-        if threading.active_count() - 1 < configuration['threads']:
-            pkg = package_list.pop()
-            threading.Thread(target=is_pkg_upstream, args=(pkg[0], pkg[1], args.download_flag)).start()
-    while args.download_flag and threading.active_count() != 1:
-        pass
-    return True
+    subprocess_string = str(subprocess_response.stdout.decode("utf-8")).split("\n")
 
+    local_packages = []
+    link = configuration['repository'] + "rpc/?v=5&type=info"
+    for local_package in subprocess_string:
+        if local_package != "":
+            local_packages.append(local_package.split(" "))
+            link = link + "&arg[]=" + local_package.split(" ")[0]
 
-def is_pkg_upstream(pkg, local_version, download=False):
-    link = configuration['repository'] + "cgit/aur.git/plain/PKGBUILD?h=" + pkg
-    try:
-        response = requests.get(link)
-        if response.status_code != 200:
-            error("Package response != 200 response code was: " + str(response.status_code))
-            return
-        pkgbuild = response.text
-        bindex = pkgbuild.find("pkgver=")
-        eindex = pkgbuild.find("\n", bindex)
-        upstream_version = response.text[bindex + 7:eindex]
-        if version_compare(local_version, upstream_version) == PkgVer.outofdate:
-            print("{} {} --> {}".format(pkg, local_version, upstream_version))
-            if download:
-                download_pkg(pkg)
-    except Exception as e:
-        error(e)
-        error("Could not fetch package from aur. ::: " + pkg, force=True, kill=True)
+    response = requests.get(link)
+    if response.status_code != 200:
+        error("Could not talk to AUR", force=True, kill=True)
+
+    json_response = json.loads(response.text)
+    for local_package in local_packages:
+        for upstream_package in json_response['results']:
+            if upstream_package["Name"] == local_package[0]:
+                if version_compare(local_package[1], upstream_package["Version"]) == PkgVer.outofdate:
+                    print("{} {} --> {}".format(upstream_package, local_package[1], upstream_package["Version"]))
+                    if args.download_flag:
+                        download_pkg(local_package[0])
 
 
 def make_pkg(pkg):
@@ -240,4 +224,3 @@ def error(message, force=False, kill=False):
 parse, args = parser()
 if __name__ == "__main__":
     main()
-
