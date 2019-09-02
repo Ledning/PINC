@@ -27,8 +27,13 @@ home = str(Path.home())
 config_file_location = home + "/.config/pinc/pinc.conf"
 run_list = []
 
+# PKGBUILD: https://aur.archlinux.org/cgit/aur.git/plain/PKGBUILD?h={PKG}
+# clone:    https://aur.archlinux.org/{PKG}.git
+# PKG:      https://aur.archlinux.org/packages/{PKG}
+# Search:   https://aur.archlinux.org/packages/?K={Query}
+
 configuration = {
-    'repository': "https://aur.archlinux.org/packages/",
+    'repository': "https://aur.archlinux.org/",
     'local_path': home + "/.Packages",
     'make_flags': "-sir",
     'threads': 10,
@@ -127,7 +132,7 @@ def args_validator():
 
 
 def download_pkg(pkg):
-    link = "https://aur.archlinux.org/" + pkg + ".git"
+    link = configuration['repository'] + pkg + ".git"
 
     if pkg == "":
         error("No package specified.", force=True, kill=True)
@@ -142,7 +147,6 @@ def download_pkg(pkg):
                 error("You don't have enough space :(", force=True, kill=True)
             else:
                 error("Unknown error creating directory")
-
     try:
         subprocess.run(["git", "-C", configuration['local_path'], "clone", link], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     except:
@@ -153,7 +157,7 @@ def download_pkg(pkg):
 
 
 def search_pkg(query):
-    link = configuration['repository'] + "?K=" + urllib.parse.quote(query)
+    link = configuration['repository'] + "packages/?K=" + urllib.parse.quote(query)
     try:
         response = requests.get(link)
         parsed_html = BeautifulSoup(response.text, "html.parser")
@@ -183,14 +187,19 @@ def update_pkg():
     return True
 
 
-def is_pkg_upstream(pkg, ver, download=False):
-    link = configuration['repository'] + pkg
+def is_pkg_upstream(pkg, local_version, download=False):
+    link = configuration['repository'] + "cgit/aur.git/plain/PKGBUILD?h=" + pkg
     try:
         response = requests.get(link)
-        parsed_html = BeautifulSoup(response.text, "html.parser")
-        newest_pkg = str(parsed_html.find_all("h2")[1]).replace("<h2>Package Details: ", "").replace("</h2>", "").split(" ")
-        if version_compare(ver, newest_pkg[1]) == PkgVer.outofdate:
-            print("{} {} --> {}".format(pkg, ver, newest_pkg[1]))
+        if response.status_code != 200:
+            error("Package response != 200 response code was: " + str(response.status_code))
+            return
+        pkgbuild = response.text
+        bindex = pkgbuild.find("pkgver=")
+        eindex = pkgbuild.find("\n", bindex)
+        upstream_version = response.text[bindex + 7:eindex]
+        if version_compare(local_version, upstream_version) == PkgVer.outofdate:
+            print("{} {} --> {}".format(pkg, local_version, upstream_version))
             if download:
                 download_pkg(pkg)
     except Exception as e:
