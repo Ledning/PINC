@@ -32,4 +32,4 @@ In the future PINC will be available on AUR.
 
 ## License
 
-[The GNU General Public License v3.0](LICENSE)
+[The GNU General Public License v3.0](LICENSE) or newer.
