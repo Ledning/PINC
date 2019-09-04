@@ -114,8 +114,8 @@ def config_parser():
 def args_validator():
     if len(sys.argv) < 2:
         return False
-    if args.verbose_flag and len(sys.argv) < 3:
-        return False
+    # if args.verbose_flag and len(sys.argv) < 3:
+    #     return False
 
     if args.search_flag and (args.download_flag or args.update_flag or args.run_flag):
         return False
@@ -180,7 +180,7 @@ def update_pkg():
             link = link + "&arg[]=" + local_package.split(" ")[0]
 
     response = requests.get(link)
-    if response.status_code != 200:
+    if response.status_code < 200 or response.status_code > 299:
         error("Could not talk to AUR", force=True, kill=True)
 
     json_response = json.loads(response.text)
@@ -188,7 +188,7 @@ def update_pkg():
         for upstream_package in json_response['results']:
             if upstream_package["Name"] == local_package[0]:
                 if version_compare(local_package[1], upstream_package["Version"]) == PkgVer.outofdate:
-                    print("{} {} --> {}".format(upstream_package, local_package[1], upstream_package["Version"]))
+                    print("{} {} --> {}".format(upstream_package["Name"], local_package[1], upstream_package["Version"]))
                     if args.download_flag:
                         download_pkg(local_package[0])
 
