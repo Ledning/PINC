@@ -24,7 +24,7 @@ class PkgVer(Enum):
 
 
 home = str(Path.home())
-config_file_location = home + "/.config/pinc/pinc.conf"
+config_file_location = home + "/.config/pinc/config"
 run_list = []
 
 configuration = {
@@ -53,8 +53,11 @@ def main():
         update_pkg()
     if args.run_flag:
         if not args.download_flag:
-            for pkg in args.pkg:
-                make_pkg(pkg)
+            if len(args.pkg) > 0:
+                for pkg in args.pkg:
+                    make_pkg(pkg)
+            else:
+                run_all_packages()
     if len(run_list) > 0:
         for pkg in run_list:
             make_pkg(pkg)
@@ -67,6 +70,7 @@ def main():
 
 def parser():
     p = argparse.ArgumentParser(description="PINC Is Not Cower!")
+    p.add_argument("-a", dest='ask_flag', action='store_true', help='Selected operations')
     p.add_argument("-d", dest='download_flag', action='store_true', help='download package')
     p.add_argument("-s", dest='search_flag', action='store_true', help='Search for package in the aur repository')
     p.add_argument("-u", dest='update_flag', action='store_true', help='Check for updates')
@@ -116,12 +120,13 @@ def args_validator():
         return False
     if args.verbose_flag and len(sys.argv) < 3:
         return False
-
+    if args.update_flag and args.pkg:
+        return False
     if args.search_flag and (args.download_flag or args.update_flag or args.run_flag):
         return False
     if args.download_flag and not (args.pkg or args.update_flag):
         return False
-    if args.run_flag and not (args.download_flag or args.pkg):
+    if args.run_flag and args.update_flag and not args.download_flag:
         return False
     if args.clean_flag and args.download_flag and not args.run_flag:
         error("Okay... But why?", force=True)
@@ -184,13 +189,33 @@ def update_pkg():
         error("Could not talk to AUR", force=True, kill=True)
 
     json_response = json.loads(response.text)
+    outofdate = []
     for local_package in local_packages:
         for upstream_package in json_response['results']:
             if upstream_package["Name"] == local_package[0]:
                 if version_compare(local_package[1], upstream_package["Version"]) == PkgVer.outofdate:
                     print("{} {} --> {}".format(upstream_package["Name"], local_package[1], upstream_package["Version"]))
-                    if args.download_flag:
+                    if args.download_flag and not args.ask_flag:
                         download_pkg(local_package[0])
+                    elif args.ask_flag:
+                        outofdate.append(local_package[0])
+    if len(outofdate) > 0:
+        selective_download(outofdate)
+
+
+def selective_download(packages):
+    selection = select(packages)
+
+    for index in selection:
+        download_pkg(packages[int(index, 10) - 1])
+
+
+def run_all_packages():
+    packages = os.listdir(configuration['local_path'])
+    if args.ask_flag:
+        packages = select(packages)
+    for package in packages:
+        make_pkg(package)
 
 
 def make_pkg(pkg):
@@ -202,6 +227,21 @@ def make_pkg(pkg):
         # TODO: Run this gpg --search-keys A2C794A986419D8A
     except:
         error("\033[1;31mPINC :::     \033[0mFailed to build pkg")
+
+
+def select(packages):
+    ret_val = []
+    i = 0
+    for package in packages:
+        i = i + 1
+        print(str(i) + ") " + package)
+
+    print("Select the packages you want.")
+    selection = input().split(" ")
+
+    for index in selection:
+        ret_val.append(packages[int(index, 10) - 1])
+    return ret_val
 
 
 def version_compare(local, upstream):
