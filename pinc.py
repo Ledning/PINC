@@ -10,6 +10,7 @@ import urllib
 from enum import Enum
 from pathlib import Path
 from subprocess import PIPE
+import columnate
 
 import requests
 from bs4 import BeautifulSoup
@@ -158,19 +159,27 @@ def download_pkg(pkg):
         run_list.append(pkg)
 
 
+def getpopularity(pkg):
+    return pkg[2]
+
+
 def search_pkg(query):
-    link = configuration['repository'] + "packages/?K=" + urllib.parse.quote(query)
-    try:
-        response = requests.get(link)
-        parsed_html = BeautifulSoup(response.text, "html.parser")
-        parsed_query = parsed_html.find_all("tr")
-        for x in parsed_query[1:]:
-            y = x.find('td', attrs={'class': 'wrap'})
-            print(x.a.contents[0] + ": " + str(y.text))
-        if len(parsed_query) == 0:
-            print("No packages found")
-    except:
-        error("Could not search for package from aur.", force=True, kill=True)
+    link = configuration['repository'] + "/rpc/?v=5&type=search&by=name-desc&arg=" + urllib.parse.quote(query.strip())
+
+    response = requests.get(link)
+    if response.status_code != 200:
+        error("Could not reach repository.", force=True, kill=True)
+
+    json_response = json.loads(response.text)
+    packages = []
+
+    for package in json_response["results"]:
+        packages.append((package["Name"], package["Description"], float(package["Popularity"]), int(package["NumVotes"]), package["Version"]))
+
+    sorted_packages = sorted(packages, key=getpopularity, reverse=True)
+
+    matrix = [["Name", "Description", "Popularity", "Votes", "Version"], *sorted_packages]
+    print(columnate.lists(matrix))
 
 
 def update_pkg():
@@ -236,7 +245,7 @@ def select(packages):
         i = i + 1
         print(str(i) + ") " + package)
 
-    print("Select the packages you want.")
+    print("Select the packages you want. Separate by spaces. ")
     selection = input().split(" ")
 
     for index in selection:
