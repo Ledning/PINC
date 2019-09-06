@@ -6,27 +6,27 @@ PINC \- PINC Is Not Cower!
 .SH "SYNOPSIS"
 Usage: \fIpinc\fR <operation> <target>
 .SH "DESCRIPTION"
-PINC is an Free and Open Source AUR helper for Arch Linux. PINC is inspired by the simplicity of cower, and developed to be simple to use, independent of pacman, while offering as much or as little automatization as the user wishes.
+PINC is a Free and Open Source AUR helper for Arch Linux. PINC is inspired by the simplicity of cower, and developed to be simple to use and independent of pacman, while offering automatization of the updating process.
 .SH "OPERATIONS"
 .IX Header "OPERATIONS"
 .IP "\fB\-h, \-\-help\fR" 4
 Display help message and quit.
 .IP "\fB\-d\fR" 4
-Download \fItarget\fR. Downloads packages, can be used with the \fB\-u\fR command.
+Download \fItarget\fR. Downloads packages. If used with the \fB\-u\fR command, existing outdated packages are downloaded.
 .IP "\fB\-s\fR" 4
 Search for packages with the \fItarget\fR(s) as the search term(s).
 .IP "\fB\-u\fR" 4
-Check foreign packages for updates in the \s-1AUR.\s0 Without any arguments, all manually installed packages will be checked. This operation can be combined with the \&\fB\-d\fR operation.
+Check foreign packages for updates in the \s-1AUR.\s0 Without any arguments, all manually installed packages are checked.
 .IP "\fB\-r\fR" 4
-Run makepkg on \fItarget\fR(s), can be combined with the \fB\-u\fR and \fB\-d\fR command.
-.IP "\fB-c\fR" 4
+Run makepkg on \fItarget\fR(s). If combined with \fB\-d\fR and \fItarget\fR, the package is downloaded and built. If combined with \fB\-u\fR and \fB\-d\fR, all existing packages are updated.
+.IP "\fB\-c\fR" 4
 Clean package folder. Done by deleting the default \fI.Packages\fR folder and creating a new one in its place.
-.IP "\fB-v\fR" 4
+.IP "\fB\-v\fR" 4
 Verbose output.
-.IP "\fB-a\fR" 4
-Ask user to select packages for operations, needs to be combined with \fB\-ud\fR or \fB\-r\fR.
+.IP "\fB\-a\fR" 4
+Ask user to select packages for operations. Needs to be combined with \fB\-ud\fR, \fB\-udr \fB, \fB\-r\fR, or \fB\-s\fR.
 .SH "CONFIG FILE"
-pinc honors a config file which will be looked for at:
+PINC honors a config file which is looked for at:
 .PP
 .Vb 1
 \&  $HOME/.config/pinc/config
