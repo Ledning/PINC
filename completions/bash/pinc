@@ -1,0 +1,26 @@
+#/usr/bin/env bash
+
+_pinc_completions()
+{
+    local cur prev opts
+    COMPREPLY=()
+    cur="${COMP_WORDS[COMP_CWORD]}"
+    prev="${COMP_WORDS[COMP_CWORD-1]}"
+    opts="-h --help -s -a -d -u -r -v -c"
+
+    case "${prev}" in
+        --help|[[:digit:]]|-!(-*)[hgt])
+            return 0
+            ;;
+        *)
+        ;;
+    esac
+
+    if [[ "$cur" == --* ]]; then
+        COMPREPLY=( $(compgen -W '--help' -- ${cur}) )
+    elif [[ "$cur" == -* ]]; then
+        COMPREPLY=( $(compgen -W '-h -s -a -d -u -r -v -c' -- ${cur}) )
+    fi
+}
+
+complete -F _pinc_completions pinc

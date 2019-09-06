@@ -1,0 +1,44 @@
+.IX Title "PINC 8"
+.TH PINC 8 "2019-09-06" "PINC 1" "PINC Manual"
+.\" ================== START OF ACTUAL MAN INFO ============================
+.SH "NAME"
+PINC \- PINC Is Not Cower!
+.SH "SYNOPSIS"
+Usage: \fIpinc\fR <operation> <target>
+.SH "DESCRIPTION"
+PINC is an Free and Open Source AUR helper for Arch Linux. PINC is inspired by the simplicity of cower, and developed to be simple to use, independent of pacman, while offering as much or as little automatization as the user wishes.
+.SH "OPERATIONS"
+.IX Header "OPERATIONS"
+.IP "\fB\-h, \-\-help\fR" 4
+Display help message and quit.
+.IP "\fB\-d\fR" 4
+Download \fItarget\fR. Downloads packages, can be used with the \fB\-u\fR command.
+.IP "\fB\-s\fR" 4
+Search for packages with the \fItarget\fR(s) as the search term(s).
+.IP "\fB\-u\fR" 4
+Check foreign packages for updates in the \s-1AUR.\s0 Without any arguments, all manually installed packages will be checked. This operation can be combined with the \&\fB\-d\fR operation.
+.IP "\fB\-r\fR" 4
+Run makepkg on \fItarget\fR(s), can be combined with the \fB\-u\fR and \fB\-d\fR command.
+.IP "\fB-c\fR" 4
+Clean package folder. Done by deleting the default \fI.Packages\fR folder and creating a new one in its place.
+.IP "\fB-v\fR" 4
+Verbose output.
+.IP "\fB-a\fR" 4
+Ask user to select packages for operations, needs to be combined with \fB\-ud\fR or \fB\-r\fR.
+.SH "CONFIG FILE"
+pinc honors a config file which will be looked for at:
+.PP
+.Vb 1
+\&  $HOME/.config/pinc/config
+.Ve
+.PP
+A documented example config file can be found at /usr/share/doc/pinc/config.
+.SH "BUGS"
+.IX Header "BUGS"
+Report bugs as issues on GitHub or fix them and send a pull request.
+.IX "SOURCE CODE"
+The source code, and issues can be found at https://github.com/Ledning/PINC
+.SH "AUTHORS"
+Mathias Leding <mathias@leding.dk>
+.br
+Jesper Windelborg Nielsen <jesper@windelborg.dk>

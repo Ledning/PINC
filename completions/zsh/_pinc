@@ -1,0 +1,11 @@
+#compdef pinc
+
+_arguments -C -S \
+  {-h,--help}'[Display the help]': \
+  -s'[Search]': \
+  -a'[Ask before operation]': \
+  -d'[Download]': \
+  -u'[Update]': \
+  -r'[Run makepkg]': \
+  -v'[Verbose output]': \
+  -c'[Clean packages folder]':
